@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Imagen - Sistema de Albaranes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    /* Estilos para el login */
+    .login-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: 50px auto;
+      text-align: center;
+    }
+    
+    .login-container h1 {
+      color: #007cba;
+      margin-bottom: 30px;
+    }
+    
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .login-form input {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    
+    .login-form button {
+      padding: 12px;
+      background: #007cba;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    
+    .login-form button:hover {
+      background: #005a87;
+    }
+    
+    .error-message {
+      color: #d32f2f;
+      margin-top: 10px;
+      padding: 10px;
+      background: #ffebee;
+      border-radius: 5px;
+    }
+    
+    /* Estilos para la aplicación principal */
+    .main-app {
+      display: none;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .user-info {
+      background: #e3f2fd;
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .user-info .user-details {
+      color: #1976d2;
+      font-weight: bold;
+    }
+    
+    .logout-btn {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    
+    .logout-btn:hover {
+      background: #d32f2f;
+    }
+    
+    canvas {
+      border: 1px solid #ccc;
+      max-width: 100%;
+      height: auto;
+    }
+    
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+    
+    label {
+      font-weight: 600;
+      margin-bottom: 5px;
+      font-family: 'Montserrat', sans-serif;
+    }
+    
+    input, select, textarea {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: #007cba;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 10px 5px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+    }
+    
+    button:hover {
+      background: #005a87;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    h2 {
+      grid-column: 1 / -1;
+      color: #333;
+      border-bottom: 2px solid #007cba;
+      padding-bottom: 5px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin: 0;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .status-message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <!-- Pantalla de Login -->
+  <div id="loginScreen" class="login-container">
+    <h1>🏢 Sistema de Albaranes</h1>
+    <form class="login-form" id="loginForm">
+      <input type="text" id="username" placeholder="Usuario" required>
+      <input type="password" id="password" placeholder="Contraseña" required>
+      <button type="submit">Iniciar Sesión</button>
+    </form>
+    <div id="loginError" class="error-message" style="display: none;"></div>
+  </div>
+
+  <!-- Aplicación Principal -->
+  <div id="mainApp" class="main-app">
+    <!-- Información del usuario -->
+    <div class="user-info">
+      <div class="user-details">
+        <span id="currentUser"></span> - <span id="loginTime"></span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+    </div>
+
+    <h1>Rellenar Albarán</h1>
+
+    <!-- Cargar imagen -->
+    <input type="file" id="imageUpload" accept="image/*" />
+    <!-- Cargar imagen del pasaporte -->
+<div class="form-group full-width">
+  <label for="passportUpload">Imagen del Pasaporte (opcional):</label>
+  <input type="file" id="passportUpload" accept="image/*" />
+  <div id="passportPreview" style="margin-top: 10px; display: none;">
+    <img id="passportImg" style="max-width: 300px; max-height: 200px; border: 1px solid #ccc;" />
+    <p>Imagen del pasaporte cargada</p>
+  </div>
+</div>
+
+    <!-- Canvas donde se dibuja la imagen y el texto -->
+    <canvas id="canvas" style="display:block; margin:2rem 0;"></canvas>
+
+    <!-- Formulario -->
+    <form id="formulario">
+
+      <h2>Información Cliente</h2>
+      <div class="form-group">
+        <label for="fecha">Fecha:</label>
+        <input type="date" id="fecha" name="fecha">
+      </div>
+
+      <div class="form-group">
+        <label for="cliente">Cliente:</label>
+        <input type="text" id="cliente" name="cliente" required>
+      </div>
+      <div class="form-group">
+        <label for="dni">DNI/NIE/PP:</label>
+        <input type="text" id="dni" name="dni">
+      </div>
+      
+      <div class="form-group">
+        <label for="telefono">Teléfono:</label>
+        <input type="text" id="telefono" name="telefono">
+      </div>
+
+       <div class="form-group">
+        <label for="localizador">Localizador:</label>
+        <input type="text" id="localizador" name="localizador">
+      </div>
+      <div class="form-group">
+        <label for="m">M:</label>
+        <input type="text" id="m" name="m">
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email">
+      </div>
+
+      <div class="form-group">
+        <label for="agente">Agente:</label>
+        <input type="text" id="agente" name="agente">
+      </div>
+      <h2>Informacion Billete</h2>
+      <div class="form-group">
+        <label for="pasajero">Nº Pax:</label>
+        <input type="text" id="pasajero" name="pasajero">
+      </div>
+
+      <div class="form-group">
+        <label for="origen">Origen:</label>
+        <input type="text" id="origen" name="origen">
+      </div>
+
+      <div class="form-group">
+        <label for="destino">Destino:</label>
+        <input type="text" id="destino" name="destino">
+      </div>
+
+      <div class="form-group">
+        <label for="fechaSalida">Fecha de Salida Origen:</label>
+        <input type="text" id="fechaSalida" name="fechaSalida">
+      </div>
+
+      <div class="form-group">
+        <label for="fechaDestino">Fecha de Salida Destino:</label>
+        <input type="text" id="fechaDestino" name="fechaDestino">
+      </div>
+
+      <h2>Detalles albarán<h2>
+      
+       <div class="form-group full-width">
+        <label for="tipoAlbaran">Tipo de Albarán:</label>
+        <input type="text" id="tipoAlbaran" name="tipoAlbaran">
+      </div>
+
+      <div class="form-group full-width">
+        <label for="detalles">Detalles:</label>
+        <textarea id="detalles" name="detalles" rows="3" placeholder="Presiona Enter para hacer saltos de línea..."></textarea>
+      </div>
+<h2>Datos de Financiación</h2>
+
+      <div class="form-group">
+        <label for="fechaFinanciacion">Primer pago financiado:</label>
+        <input type="text" id="fechaFinanciacion" name="fechaFinanciacion">
+      </div>
+
+      <div class="form-group">
+        <label for="fechaTotal">Segundo pago financiado:</label>
+        <input type="text" id="fechaTotal" name="fechaTotal">
+      </div>
+
+      <div class="form-group">
+        <label for="fechaAbonado">Tercer pago financiado:</label>
+        <input type="text" id="fechaAbonado" name="fechaAbonado">
+      </div>
+      <h2>Importes...</h2>
+      <div class="form-group">
+        <label for="importe">Importe:</label>
+        <input type="text" id="importe" name="importe">
+      </div>
+
+      <div class="form-group">
+        <label for="importeFinanciacion">Importe Financiación:</label>
+        <input type="text" id="importeFinanciacion" name="importeFinanciacion">
+      </div>
+
+      <div class="form-group">
+        <label for="importeTotal">Importe Total:</label>
+        <input type="text" id="importeTotal" name="importeTotal">
+      </div>
+
+      <div class="form-group">
+        <label for="importeAbonado">Importe Abonado:</label>
+        <input type="text" id="importeAbonado" name="importeAbonado">
+      </div>
+
+      <div class="form-group">
+        <label for="importeRestante">Importe Restante:</label>
+        <input type="text" id="importeRestante" name="importeRestante">
+      </div>
+<h2>Servicios</h2>
+      
+
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="hotelSi" name="hotelSi">
+          <label for="hotelSi">Hotel Sí</label>
+        </div>
+      </div>
+        
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="hotelNo" name="hotelNo">
+          <label for="hotelNo">Hotel No</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="nmaletas">Nº maletas:</label>
+        <input type="text" id="nmaletas" name="nmaletas">
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="seguroSaludSi" name="seguroSaludSi">
+          <label for="seguroSaludSi">Seguro Viaje Salud Sí</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="seguroSaludNo" name="seguroSaludNo">
+          <label for="seguroSaludNo">Seguro Viaje Salud No</label>
+        </div>
+      </div>
+
+      <h2>Datos de Pago</h2>
+
+      <div class="form-group full-width">
+        <label for="observaciones">Concepto de Ingreso:</label>
+        <textarea id="observaciones" name="observaciones" rows="4" placeholder="Presiona Enter para hacer saltos de línea. Escriba aquí todas las observaciones adicionales..."></textarea>
+      </div>
+      <div class="form-group full-width">
+  <label for="firmaAgente">Firma Agente:</label>
+  <input type="text" id="firmaAgente" name="firmaAgente" placeholder="Escriba la firma del agente...">
+</div>
+
+      <button type="button" id="submitBtn">Enviar</button>
+    </form>
+
+    <!-- Mensajes de estado -->
+    <div id="statusMessage" style="display: none;"></div>
+
+    <!-- Controles -->
+    <div>
+      <button id="downloadBtn">Descargar Imagen</button>
+      
+      <button id="adjustPositionsBtn">Ajustar Posiciones (Click en campos)</button>
+      <button onclick="savePositions()">Guardar Posiciones</button>
+<input type="file" id="loadPositionsFile" accept=".json" onchange="loadPositions(event)" style="display:none">
+<button onclick="document.getElementById('loadPositionsFile').click()">Cargar Posiciones</button>
+<button onclick="exportPositionsAsCode()">Exportar como Código</button>
+    </div>
+    
+    
+    
+  </div>
+
+  <script>
+    // Variables globales para el usuario
+    let currentUser = null;
+    let loginTime = null;
+
+    // Variables del canvas y la aplicación
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let img = new Image();
+    let positions = [];
+    const TEXT_COLOR = "#333333";
+    let adjustMode = false;
+    let passportImage = null;
+    let passportImageData = null;
+
+    let albaranNumber = 1;
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw1qj83lCiq2--7vLmX03QwT0B9Cr87tD-1yyspOYpIrXVJ2MyFQUv6jQSfS706NGqF/exec';
+
+    // Campos del formulario
+    const fields = [
+      'cliente','telefono','email','pasajero','origen','destino',
+      'fechaSalida','fechaDestino','localizador','dni','m','agente','fecha',
+      'tipoAlbaran','detalles','importe','importeFinanciacion','importeTotal','importeAbonado','importeRestante',
+      'nmaletas','hotelSi','hotelNo','seguroSaludSi', 'seguroSaludNo','fechaFinanciacion','fechaTotal','fechaAbonado','observaciones'
+      ,'firmaAgente'
+    ];
+
+    // Posiciones de los campos
+    const fieldPositions = [
+      { name: 'cliente',         x: 143, y: 152, width: 400, height: 20, fontSize: '14px' },
+      { name: 'telefono',        x: 159, y: 169, width: 200, height: 20, fontSize: '14px' },
+      { name: 'email',           x: 140, y: 187, width: 300, height: 20, fontSize: '14px' },
+      { name: 'pasajero',        x: 167, y: 234, width: 100, height: 20, fontSize: '14px' },
+      { name: 'origen',          x: 412, y: 233, width: 200, height: 20, fontSize: '14px' },
+      { name: 'destino',         x: 618, y: 234, width: 200, height: 20, fontSize: '14px' },
+      { name: 'fechaSalida',     x: 233, y: 251, width: 150, height: 20, fontSize: '14px' },
+      { name: 'fechaDestino',    x: 555, y: 251, width: 150, height: 20, fontSize: '14px' },
+      { name: 'localizador',     x: 414, y: 169, width: 150, height: 20, fontSize: '14px' },
+      { name: 'dni',             x: 618, y: 151, width: 200, height: 20, fontSize: '14px' },
+      { name: 'm',               x: 580, y: 169, width: 100, height: 20, fontSize: '14px' },
+      { name: 'agente',          x: 607, y: 185, width: 200, height: 20, fontSize: '14px' },
+      { name: 'fecha',           x: 676, y: 99, width: 120, height: 20, fontSize: '14px' },
+      { name: 'tipoAlbaran',     x: 160, y: 303, width: 500, height: 20, fontSize: '18px', fontWeight: 'bold' },
+      { name: 'detalles',        x: 158, y: 325, width: 500, height: 60, fontSize: '14px' },
+      { name: 'importe',         x: 686, y: 302, width: 100, height: 20, fontSize: '12px' },
+      { name: 'importeTotal',    x: 687, y: 350, width: 100, height: 20, fontSize: '12px' },
+      { name: 'importeFinanciacion',    x: 686, y: 326, width: 100, height: 20, fontSize: '12px' },
+      { name: 'importeAbonado',  x: 686, y: 373, width: 100, height: 20, fontSize: '12px' },
+      { name: 'importeRestante', x: 687, y: 397, width: 100, height: 20, fontSize: '12px' },
+      { name: 'nmaletas',        x: 357, y: 394, width: 80, height: 20, fontSize: '14px' },
+      { name: 'hotelSi',         x: 251, y: 397, width: 30, height: 20, type: 'checkbox' },
+      { name: 'hotelNo',         x: 269, y: 396, width: 30, height: 20, type: 'checkbox' },
+      { name: 'seguroSaludSi',   x: 459, y: 395, width: 30, height: 20, type: 'checkbox' },
+      { name: 'seguroSaludNo',   x: 477, y: 398, width: 30, height: 20, type: 'checkbox' },
+      { name: 'fechaFinanciacion', x: 490, y: 327, width: 100, height: 20, fontSize: '10px' },
+      { name: 'fechaTotal',      x: 490, y: 350, width: 100, height: 20, fontSize: '10px' },
+      { name: 'fechaAbonado',    x: 490, y: 374, width: 100, height: 20, fontSize: '10px' },
+      { name: 'observaciones',   x: 638, y: 448, width: 500, height: 80, fontSize: '10px' },
+      { name: 'firmaAgente',      x: 546, y: 513, width: 300, height: 20, fontSize: '16px' }
+    ];
+
+    // --- SISTEMA DE LOGIN ---
+    
+    // Manejar el formulario de login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      
+      try {
+        const result = await authenticateUser(username, password);
+        if (result.success) {
+          currentUser = result.userInfo;
+          loginTime = new Date().toLocaleString('es-ES');
+          showMainApp();
+          await getNextAlbaranNumber();
+        } else {
+          showLoginError(result.message);
+        }
+      } catch (error) {
+        showLoginError('Error de conexión. Inténtalo de nuevo.');
+      }
+    });
+
+    // Agregar estas funciones después de las otras funciones
+
+// Función para guardar posiciones
+function savePositions() {
+  const positionsData = JSON.stringify(fieldPositions, null, 2);
+  const blob = new Blob([positionsData], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'field_positions.json';
+  link.click();
+  URL.revokeObjectURL(url);
+  showStatusMessage('Posiciones guardadas en archivo JSON');
+}
+
+// Función para cargar posiciones desde archivo
+function loadPositions(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const loadedPositions = JSON.parse(e.target.result);
+        fieldPositions.length = 0; // Limpiar array
+        fieldPositions.push(...loadedPositions); // Cargar nuevas posiciones
+        updatePositions();
+        drawText();
+        showStatusMessage('Posiciones cargadas correctamente');
+      } catch (error) {
+        showStatusMessage('Error al cargar el archivo de posiciones', true);
+      }
+    };
+    reader.readAsText(file);
+  }
+}
+
+// Función para exportar posiciones como código JavaScript
+function exportPositionsAsCode() {
+  const codeString = `const fieldPositions = ${JSON.stringify(fieldPositions, null, 2)};`;
+  const blob = new Blob([codeString], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'field_positions.js';
+  link.click();
+  URL.revokeObjectURL(url);
+  showStatusMessage('Código de posiciones exportado');
+}
+
+// Agregar estos botones al HTML después del botón "Ajustar Posiciones"
+/*
+<button onclick="savePositions()">Guardar Posiciones</button>
+<input type="file" id="loadPositionsFile" accept=".json" onchange="loadPositions(event)" style="display:none">
+<button onclick="document.getElementById('loadPositionsFile').click()">Cargar Posiciones</button>
+<button onclick="exportPositionsAsCode()">Exportar como Código</button>
+*/
+    // Función para autenticar usuario
+    async function authenticateUser(username, password) {
+      try {
+        const response = await fetch(`${WEB_APP_URL}?action=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`);
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error en autenticación:', error);
+        return { success: false, message: 'Error de conexión' };
+      }
+    }
+
+    // Mostrar error de login
+    function showLoginError(message) {
+      const errorDiv = document.getElementById('loginError');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    // Mostrar aplicación principal
+    function showMainApp() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('currentUser').textContent = `Usuario: ${currentUser.nombre} (${currentUser.username})`;
+      document.getElementById('loginTime').textContent = `Conexión: ${loginTime}`;
+    }
+
+    // Función de logout
+    function logout() {
+      if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        currentUser = null;
+        loginTime = null;
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginForm').reset();
+        document.getElementById('formulario').reset();
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        img.src = '';
+        positions = [];
+      }
+    }
+
+    // --- FUNCIONES DE UTILIDAD ---
+
+    // Función para mostrar mensajes de estado
+    function showStatusMessage(message, isError = false) {
+      const statusDiv = document.getElementById('statusMessage');
+      statusDiv.textContent = message;
+      statusDiv.className = `status-message ${isError ? 'status-error' : 'status-success'}`;
+      statusDiv.style.display = 'block';
+      
+      setTimeout(() => {
+        statusDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    // Función para formatear fecha a DD-MM-YYYY
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+
+    // --- FUNCIONES PRINCIPALES ---
+
+    // Función para obtener el siguiente número de albarán
+    async function getNextAlbaranNumber() {
+      try {
+        const response = await fetch(`${WEB_APP_URL}?action=getNextNumber`);
+        const data = await response.json();
+        
+        if (data.albaranNumber) {
+          albaranNumber = data.albaranNumber;
+          console.log("Siguiente número de albarán:", albaranNumber);
+          
+          if (img.src) {
+            drawText();
+          }
+          
+          return albaranNumber;
+        } else {
+          console.error('Error en la respuesta:', data);
+          return 1;
+        }
+      } catch (error) {
+        console.error('Error al obtener el número de albarán:', error);
+        return 1;
+      }
+    }
+
+    // Función para enviar datos a Google Sheets
+    async function sendDataToGoogleSheets() {
+  try {
+    // Preparar los datos del formulario
+    const formData = new FormData();
+    formData.append('action', 'saveData');
+    formData.append('albaranNumber', albaranNumber);
+    formData.append('usuario_registro', currentUser.username);
+    formData.append('nombre_usuario', currentUser.nombre);
+    formData.append('fecha_registro', new Date().toISOString());
+
+    // Preparar datos de hotel
+    let hotelValue = '';
+    if (document.getElementById('hotelSi').checked) hotelValue = 'Sí';
+    else if (document.getElementById('hotelNo').checked) hotelValue = 'No';
+
+    // Preparar datos de seguro de salud
+    let seguroSaludValue = '';
+    if (document.getElementById('seguroSaludSi').checked) seguroSaludValue = 'Sí';
+    else if (document.getElementById('seguroSaludNo').checked) seguroSaludValue = 'No';
+
+    // Agregar todos los campos del formulario
+    fields.forEach(fieldName => {
+      const fieldElement = document.getElementById(fieldName);
+      if (fieldElement) {
+        if (fieldElement.type === 'checkbox') {
+          if (fieldName === 'hotelSi' || fieldName === 'hotelNo') {
+            formData.append('hotel', hotelValue);
+          } else if (fieldName === 'seguroSaludSi' || fieldName === 'seguroSaludNo') {
+            formData.append('seguroSalud', seguroSaludValue);
+          }
+        } else if (fieldElement.type === 'date') {
+          formData.append(fieldName, formatDate(fieldElement.value));
+        } else {
+          formData.append(fieldName, fieldElement.value);
+        }
+      }
+    });
+
+    // Añadir las imágenes si existen
+    if (canvas.toDataURL) {
+      formData.append('albaranImage', canvas.toDataURL('image/jpeg', 0.8));
+    }
+    
+    if (passportImageData) {
+      formData.append('passportImage', passportImageData);
+    }
+
+    const response = await fetch(WEB_APP_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error al enviar datos:', error);
+    return { success: false, message: 'Error de conexión' };
+  }
+}
+
+    // Cargar la imagen seleccionada
+    document.getElementById('imageUpload').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            updatePositions();
+            drawText();
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+        
+      }
+    });
+    // Cargar imagen del pasaporte
+document.getElementById('passportUpload').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      passportImageData = event.target.result;
+      const img = document.getElementById('passportImg');
+      img.src = passportImageData;
+      document.getElementById('passportPreview').style.display = 'block';
+      showStatusMessage('Imagen del pasaporte cargada correctamente.');
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+    // Función para dibujar una cruz para checkboxes
+    function drawCross(x, y, size = 10) {
+      ctx.strokeStyle = TEXT_COLOR;
+      ctx.lineWidth = 1;
+      
+      ctx.beginPath();
+      ctx.moveTo(x - size/2, y - size/2);
+      ctx.lineTo(x + size/2, y + size/2);
+      ctx.moveTo(x + size/2, y - size/2);
+      ctx.lineTo(x - size/2, y + size/2);
+      ctx.stroke();
+    }
+
+    // Función para manejar saltos de línea en texto
+    function wrapText(text, x, y, maxWidth, lineHeight) {
+      const lines = text.split('\n');
+      let currentY = y;
+      
+      lines.forEach(line => {
+        if (line.trim() === '') {
+          currentY += lineHeight;
+          return;
+        }
+        
+        const words = line.split(' ');
+        let currentLine = '';
+        
+        for (let i = 0; i < words.length; i++) {
+          const testLine = currentLine + words[i] + ' ';
+          const metrics = ctx.measureText(testLine);
+          
+          if (metrics.width > maxWidth && i > 0) {
+            ctx.fillText(currentLine, x, currentY);
+            currentLine = words[i] + ' ';
+            currentY += lineHeight;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        
+        if (currentLine.trim() !== '') {
+          ctx.fillText(currentLine, x, currentY);
+          currentY += lineHeight;
+        }
+      });
+    }
+
+    // Función principal para dibujar texto
+    function drawText() {
+      if (!img.src) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      // Dibujar el número de albarán en ROJO
+      ctx.font = "bold 14px Montserrat, Arial";
+      ctx.fillStyle = "#FF0000";
+      ctx.fillText(`${albaranNumber}`, 716, 47);
+
+      positions.forEach(pos => {
+        if (pos.text && pos.text.trim() !== '') {
+          ctx.fillStyle = TEXT_COLOR;
+          
+          const fontSize = pos.fieldData?.fontSize || '16px';
+          const fontWeight = pos.fieldData?.fontWeight || 'normal';
+          ctx.font = `${fontWeight} ${fontSize} Montserrat, Arial`;
+          
+          if (pos.isDetails || pos.isObservations) {
+            const maxWidth = pos.fieldData ? pos.fieldData.width : 500;
+            const lineHeight = 20;
+            wrapText(pos.text, pos.x, pos.y, maxWidth, lineHeight);
+          } else if (pos.isCheckbox) {
+            if (pos.text === 'Sí') {
+              drawCross(pos.x + 15, pos.y - 7);
+            }
+          } else {
+            ctx.fillText(pos.text, pos.x, pos.y);
+          }
+        }
+      });
+    }
+
+    // Función para actualizar posiciones
+    function updatePositions() {
+      positions = [];
+      
+      fieldPositions.forEach(field => {
+        const fieldElement = document.getElementById(field.name);
+        let fieldValue = '';
+        if (fieldElement) {
+          if (fieldElement.type === 'checkbox') {
+            if (fieldElement.checked) {
+              fieldValue = 'Sí';
+            }
+          } else if (fieldElement.type === 'date') {
+            fieldValue = formatDate(fieldElement.value);
+          } else {
+            fieldValue = fieldElement.value;
+          }
+        }
+
+        const isCheckbox = field.type === 'checkbox';
+        const isDetails = field.name === 'detalles';
+        const isObservations = field.name === 'observaciones';
+
+        positions.push({
+          x: field.x,
+          y: field.y,
+          text: fieldValue,
+          fieldName: field.name,
+          fieldData: field,
+          isCheckbox: isCheckbox,
+          isDetails: isDetails,
+          isObservations: isObservations
+        });
+      });
+    }
+
+    // Event listeners para actualizar el canvas cuando cambian los valores
+    fields.forEach(fieldName => {
+      const fieldElement = document.getElementById(fieldName);
+      if (fieldElement) {
+        fieldElement.addEventListener('input', () => {
+          updatePositions();
+          drawText();
+        });
+        
+        if (fieldElement.type === 'checkbox') {
+          fieldElement.addEventListener('change', () => {
+            updatePositions();
+            drawText();
+          });
+        }
+      }
+    });
+
+    // Modo ajustar posiciones - Click en canvas para ajustar
+    document.getElementById('adjustPositionsBtn').addEventListener('click', () => {
+      adjustMode = !adjustMode;
+      const btn = document.getElementById('adjustPositionsBtn');
+      if (adjustMode) {
+        btn.textContent = 'Finalizar Ajuste';
+        btn.style.backgroundColor = '#ff9800';
+        canvas.style.cursor = 'crosshair';
+        showStatusMessage('Modo ajuste activado. Haz click en el canvas para posicionar campos.');
+      } else {
+        btn.textContent = 'Ajustar Posiciones (Click en campos)';
+        btn.style.backgroundColor = '#007cba';
+        canvas.style.cursor = 'default';
+        showStatusMessage('Modo ajuste desactivado.');
+      }
+    });
+
+    // Click en canvas para ajustar posiciones
+    canvas.addEventListener('click', (e) => {
+      if (!adjustMode) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+      
+      // Buscar el campo más cercano o crear uno nuevo
+      const fieldName = prompt('¿Qué campo quieres posicionar aquí?\n\nCampos disponibles:\n' + 
+        fieldPositions.map(f => f.name).join(', '));
+      
+      if (fieldName) {
+        const fieldIndex = fieldPositions.findIndex(f => f.name === fieldName);
+        if (fieldIndex !== -1) {
+          fieldPositions[fieldIndex].x = Math.round(x);
+          fieldPositions[fieldIndex].y = Math.round(y);
+          updatePositions();
+          drawText();
+          showStatusMessage(`Campo "${fieldName}" posicionado en (${Math.round(x)}, ${Math.round(y)})`);
+        } else {
+          showStatusMessage(`Campo "${fieldName}" no encontrado.`, true);
+        }
+      }
+    });
+
+    // Manejar mutual exclusión de checkboxes
+    document.getElementById('hotelSi').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('hotelNo').checked = false;
+      }
+      updatePositions();
+      drawText();
+    });
+
+    document.getElementById('hotelNo').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('hotelSi').checked = false;
+      }
+      updatePositions();
+      drawText();
+    });
+
+    document.getElementById('seguroSaludSi').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('seguroSaludNo').checked = false;
+      }
+      updatePositions();
+      drawText();
+    });
+
+    document.getElementById('seguroSaludNo').addEventListener('change', function() {
+      if (this.checked) {
+        document.getElementById('seguroSaludSi').checked = false;
+      }
+      updatePositions();
+      drawText();
+    });
+
+    // Enviar formulario
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      if (!currentUser) {
+        showStatusMessage('Error: Usuario no autenticado', true);
+        return;
+      }
+
+      if (!img.src) {
+        showStatusMessage('Por favor, carga una imagen primero.', true);
+        return;
+      }
+
+      const clienteField = document.getElementById('cliente');
+      if (!clienteField.value.trim()) {
+        showStatusMessage('Por favor, completa al menos el campo Cliente.', true);
+        clienteField.focus();
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.textContent;
+      
+      try {
+        submitBtn.textContent = 'Enviando...';
+        submitBtn.disabled = true;
+        document.body.classList.add('loading');
+
+        const result = await sendDataToGoogleSheets();
+        
+        if (result.success) {
+          showStatusMessage('Albarán enviado correctamente.');
+          
+          document.getElementById('downloadBtn').click();
+          
+          // Incrementar número de albarán y limpiar formulario
+          albaranNumber++;
+          document.getElementById('formulario').reset();
+          // Limpiar imagen del pasaporte
+          passportImageData = null;
+          document.getElementById('passportPreview').style.display = 'none';
+          document.getElementById('passportUpload').value = '';
+          updatePositions();
+          drawText();
+          
+          // Obtener el siguiente número del servidor
+          await getNextAlbaranNumber();
+        } else {
+          showStatusMessage(`Error al enviar: ${result.message}`, true);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showStatusMessage('Error de conexión. Inténtalo de nuevo.', true);
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        document.body.classList.remove('loading');
+      }
+    });
+
+    // Descargar imagen
+    // Descargar imágenes organizadas
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if (!img.src) {
+    showStatusMessage('No hay imagen para descargar.', true);
+    return;
+  }
+  
+  const clienteNombre = document.getElementById('cliente').value.trim() || 'Cliente';
+  const clienteLimpio = clienteNombre
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .substring(0, 30);
+  
+  // Crear carpeta principal si no existe
+  const carpetaPrincipal = 'Albaranes_Clientes';
+  
+  // Descargar imagen del albarán
+  const nombreAlbaran = `${carpetaPrincipal}/${clienteLimpio}/Albaran_${albaranNumber}_${clienteLimpio}.png`;
+  const linkAlbaran = document.createElement('a');
+  linkAlbaran.download = nombreAlbaran;
+  linkAlbaran.href = canvas.toDataURL();
+  linkAlbaran.click();
+  
+  // Descargar imagen del pasaporte si existe
+  if (passportImageData) {
+    setTimeout(() => {
+      const nombrePasaporte = `${carpetaPrincipal}/${clienteLimpio}/Pasaporte_${clienteLimpio}.png`;
+      const linkPasaporte = document.createElement('a');
+      linkPasaporte.download = nombrePasaporte;
+      linkPasaporte.href = passportImageData;
+      linkPasaporte.click();
+    }, 100);
+  }
+  
+  showStatusMessage('Imágenes descargadas en la carpeta del cliente.');
+});
+
+    // Función para cargar datos de ejemplo (desarrollo)
+    function loadSampleData() {
+      document.getElementById('cliente').value = 'Juan Pérez García';
+      document.getElementById('telefono').value = '600123456';
+      document.getElementById('email').value = 'juan.perez@email.com';
+      document.getElementById('pasajero').value = '2';
+      document.getElementById('origen').value = 'Madrid';
+      document.getElementById('destino').value = 'París';
+      document.getElementById('fechaSalida').value = new Date().toISOString().split('T')[0];
+      document.getElementById('localizador').value = 'ABC123';
+      document.getElementById('dni').value = '12345678X';
+      document.getElementById('agente').value = 'María López';
+      document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+      document.getElementById('tipoAlbaran').value = 'VIAJE COMBINADO';
+      document.getElementById('detalles').value = 'Viaje de 7 días\nHotel 4 estrellas\nVuelos incluidos';
+      document.getElementById('importe').value = '1200.00';
+      document.getElementById('importeTotal').value = '1200.00';
+      document.getElementById('hotelSi').checked = true;
+      document.getElementById('seguroSaludSi').checked = true;
+      
+      updatePositions();
+      drawText();
+    }
+
+    // Inicialización
+    document.addEventListener('DOMContentLoaded', () => {
+      // Establecer fecha actual por defecto
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('fecha').value = today;
+      
+      // Modo desarrollo - descomenta la siguiente línea para cargar datos de ejemplo
+      // loadSampleData();
+    });
+  </script>
+</body>
+</html>
