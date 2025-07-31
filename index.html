@@ -234,15 +234,6 @@
 
     <!-- Cargar imagen -->
     <input type="file" id="imageUpload" accept="image/*" />
-    <!-- Cargar imagen del pasaporte -->
-<div class="form-group full-width">
-  <label for="passportUpload">Imagen del Pasaporte (opcional):</label>
-  <input type="file" id="passportUpload" accept="image/*" />
-  <div id="passportPreview" style="margin-top: 10px; display: none;">
-    <img id="passportImg" style="max-width: 300px; max-height: 200px; border: 1px solid #ccc;" />
-    <p>Imagen del pasaporte cargada</p>
-  </div>
-</div>
 
     <!-- Canvas donde se dibuja la imagen y el texto -->
     <canvas id="canvas" style="display:block; margin:2rem 0;"></canvas>
@@ -422,7 +413,6 @@
     <!-- Controles -->
     <div>
       <button id="downloadBtn">Descargar Imagen</button>
-      
       <button id="adjustPositionsBtn">Ajustar Posiciones (Click en campos)</button>
       <button onclick="savePositions()">Guardar Posiciones</button>
 <input type="file" id="loadPositionsFile" accept=".json" onchange="loadPositions(event)" style="display:none">
@@ -446,8 +436,6 @@
     let positions = [];
     const TEXT_COLOR = "#333333";
     let adjustMode = false;
-    let passportImage = null;
-    let passportImageData = null;
 
     let albaranNumber = 1;
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbym2ofOS1V2xkMmg2YD8UW-4m0y_VcIrjpZ0sO9SmQJhVuP0LTY26FFkoa6SwlUO9_S/exec';
@@ -672,64 +660,56 @@ function exportPositionsAsCode() {
 
     // Función para enviar datos a Google Sheets
     async function sendDataToGoogleSheets() {
-  try {
-    // Preparar los datos del formulario
-    const formData = new FormData();
-    formData.append('action', 'saveData');
-    formData.append('albaranNumber', albaranNumber);
-    formData.append('usuario_registro', currentUser.username);
-    formData.append('nombre_usuario', currentUser.nombre);
-    formData.append('fecha_registro', new Date().toISOString());
+      try {
+        // Preparar los datos del formulario
+        const formData = new FormData();
+        formData.append('action', 'saveData');
+        formData.append('albaranNumber', albaranNumber);
+        formData.append('usuario_registro', currentUser.username);
+        formData.append('nombre_usuario', currentUser.nombre);
+        formData.append('fecha_registro', new Date().toISOString());
 
-    // Preparar datos de hotel
-    let hotelValue = '';
-    if (document.getElementById('hotelSi').checked) hotelValue = 'Sí';
-    else if (document.getElementById('hotelNo').checked) hotelValue = 'No';
+        // Preparar datos de hotel
+        let hotelValue = '';
+        if (document.getElementById('hotelSi').checked) hotelValue = 'Sí';
+        else if (document.getElementById('hotelNo').checked) hotelValue = 'No';
 
-    // Preparar datos de seguro de salud
-    let seguroSaludValue = '';
-    if (document.getElementById('seguroSaludSi').checked) seguroSaludValue = 'Sí';
-    else if (document.getElementById('seguroSaludNo').checked) seguroSaludValue = 'No';
+        // Preparar datos de seguro de salud
+        let seguroSaludValue = '';
+        if (document.getElementById('seguroSaludSi').checked) seguroSaludValue = 'Sí';
+        else if (document.getElementById('seguroSaludNo').checked) seguroSaludValue = 'No';
 
-    // Agregar todos los campos del formulario
-    fields.forEach(fieldName => {
-      const fieldElement = document.getElementById(fieldName);
-      if (fieldElement) {
-        if (fieldElement.type === 'checkbox') {
-          if (fieldName === 'hotelSi' || fieldName === 'hotelNo') {
-            formData.append('hotel', hotelValue);
-          } else if (fieldName === 'seguroSaludSi' || fieldName === 'seguroSaludNo') {
-            formData.append('seguroSalud', seguroSaludValue);
+        // Agregar todos los campos del formulario
+        fields.forEach(fieldName => {
+          const fieldElement = document.getElementById(fieldName);
+          if (fieldElement) {
+            if (fieldElement.type === 'checkbox') {
+              // Los checkboxes se manejan arriba para hotel y seguro
+              if (fieldName === 'hotelSi' || fieldName === 'hotelNo') {
+                formData.append('hotel', hotelValue);
+              } else if (fieldName === 'seguroSaludSi' || fieldName === 'seguroSaludNo') {
+                formData.append('seguroSalud', seguroSaludValue);
+              }
+            } else if (fieldElement.type === 'date') {
+              formData.append(fieldName, formatDate(fieldElement.value));
+            } else {
+              formData.append(fieldName, fieldElement.value);
+            }
           }
-        } else if (fieldElement.type === 'date') {
-          formData.append(fieldName, formatDate(fieldElement.value));
-        } else {
-          formData.append(fieldName, fieldElement.value);
-        }
+        });
+
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        return result;
+      } catch (error) {
+        console.error('Error al enviar datos:', error);
+        return { success: false, message: 'Error de conexión' };
       }
-    });
-
-    // Añadir las imágenes si existen
-    if (canvas.toDataURL) {
-      formData.append('albaranImage', canvas.toDataURL('image/jpeg', 0.8));
     }
-    
-    if (passportImageData) {
-      formData.append('passportImage', passportImageData);
-    }
-
-    const response = await fetch(WEB_APP_URL, {
-      method: 'POST',
-      body: formData
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Error al enviar datos:', error);
-    return { success: false, message: 'Error de conexión' };
-  }
-}
 
     // Cargar la imagen seleccionada
     document.getElementById('imageUpload').addEventListener('change', (e) => {
@@ -747,24 +727,8 @@ function exportPositionsAsCode() {
           img.src = event.target.result;
         };
         reader.readAsDataURL(file);
-        
       }
     });
-    // Cargar imagen del pasaporte
-document.getElementById('passportUpload').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      passportImageData = event.target.result;
-      const img = document.getElementById('passportImg');
-      img.src = passportImageData;
-      document.getElementById('passportPreview').style.display = 'block';
-      showStatusMessage('Imagen del pasaporte cargada correctamente.');
-    };
-    reader.readAsDataURL(file);
-  }
-});
 
     // Función para dibujar una cruz para checkboxes
     function drawCross(x, y, size = 10) {
@@ -1013,15 +977,9 @@ document.getElementById('passportUpload').addEventListener('change', (e) => {
         if (result.success) {
           showStatusMessage('Albarán enviado correctamente.');
           
-          document.getElementById('downloadBtn').click();
-          
           // Incrementar número de albarán y limpiar formulario
           albaranNumber++;
           document.getElementById('formulario').reset();
-          // Limpiar imagen del pasaporte
-          passportImageData = null;
-          document.getElementById('passportPreview').style.display = 'none';
-          document.getElementById('passportUpload').value = '';
           updatePositions();
           drawText();
           
@@ -1041,42 +999,23 @@ document.getElementById('passportUpload').addEventListener('change', (e) => {
     });
 
     // Descargar imagen
-    // Descargar imágenes organizadas
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  if (!img.src) {
-    showStatusMessage('No hay imagen para descargar.', true);
-    return;
-  }
-  
-  const clienteNombre = document.getElementById('cliente').value.trim() || 'Cliente';
-  const clienteLimpio = clienteNombre
-    .replace(/[^a-zA-Z0-9\s]/g, '')
-    .replace(/\s+/g, '_')
-    .substring(0, 30);
-  
-  // Crear carpeta principal si no existe
-  const carpetaPrincipal = 'Albaranes_Clientes';
-  
-  // Descargar imagen del albarán
-  const nombreAlbaran = `${carpetaPrincipal}/${clienteLimpio}/Albaran_${albaranNumber}_${clienteLimpio}.png`;
-  const linkAlbaran = document.createElement('a');
-  linkAlbaran.download = nombreAlbaran;
-  linkAlbaran.href = canvas.toDataURL();
-  linkAlbaran.click();
-  
-  // Descargar imagen del pasaporte si existe
-  if (passportImageData) {
-    setTimeout(() => {
-      const nombrePasaporte = `${carpetaPrincipal}/${clienteLimpio}/Pasaporte_${clienteLimpio}.png`;
-      const linkPasaporte = document.createElement('a');
-      linkPasaporte.download = nombrePasaporte;
-      linkPasaporte.href = passportImageData;
-      linkPasaporte.click();
-    }, 100);
-  }
-  
-  showStatusMessage('Imágenes descargadas en la carpeta del cliente.');
-});
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      if (!img.src) {
+        showStatusMessage('No hay imagen para descargar.', true);
+        return;
+      }
+       const clienteNombre = document.getElementById('cliente').value.trim() || 'Cliente';
+      const clienteLimpio = clienteNombre
+    .replace(/[^a-zA-Z0-9\s]/g, '') // Quitar caracteres especiales
+    .replace(/\s+/g, '_') // Reemplazar espacios por guiones bajos
+    .substring(0, 30); // Limitar a 30 caracteres
+     const nombreArchivo = `Albaran_${albaranNumber}_${clienteLimpio}.png`;
+      const link = document.createElement('a');
+      link.download = nombreArchivo;
+      link.href = canvas.toDataURL();
+      link.click();
+      showStatusMessage('Imagen descargada correctamente.');
+    });
 
     // Función para cargar datos de ejemplo (desarrollo)
     function loadSampleData() {
